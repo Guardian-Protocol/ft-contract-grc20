@@ -1,0 +1,22 @@
+name: Liquidity-Contract Release action
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Checking
+        run: cargo check
+
+      - name: Cleanup
+        run: cargo clean

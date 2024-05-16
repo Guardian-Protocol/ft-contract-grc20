@@ -14,10 +14,6 @@ static mut FUNGIBLE_TOKEN: Option<FungibleToken> = None;
 extern "C" fn init() {
     let init_config: InitFt = msg::load().expect("Unable to decode InitConfig");
 
-    if init_config.initial_supply > init_config.total_supply {
-        msg::reply(FTError::SupplyError, 0).expect("Error in sending a reply");
-    }
-
     if init_config.description.chars().count() > 500 {
         msg::reply(FTError::DescriptionError, 0).expect("Error in sending a reply");
     }
@@ -36,7 +32,6 @@ extern "C" fn init() {
         description: init_config.description,
         external_links: init_config.external_links,
         current_supply: init_config.initial_supply,
-        total_supply: init_config.total_supply,
         balances,
         admins: vec![init_config.admin],
         config: init_config.config,
@@ -63,7 +58,6 @@ extern "C" fn state() {
         FTQuery::Description => FTQueryReply::Description(token.description),
         FTQuery::ExternalLinks => FTQueryReply::ExternalLinks(token.external_links),
         FTQuery::CurrentSupply => FTQueryReply::CurrentSupply(token.current_supply),
-        FTQuery::TotalSupply => FTQueryReply::TotalSupply(token.total_supply),
         FTQuery::BalanceOf(account) => {
             let balance = if let Some(balance) = token.balances.get(&account) {
                 *balance

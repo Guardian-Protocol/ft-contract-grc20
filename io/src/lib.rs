@@ -9,7 +9,7 @@ pub struct FungibleTokenMetadata;
 
 impl Metadata for FungibleTokenMetadata {
     type Init = InOut<InitFt, Result<FTEvent, FTError>>;
-    type Handle = InOut<FTAction, FTEvent>;
+    type Handle = InOut<FTAction, Result<FTEvent, FTError>>;
     type Reply = ();
     type Others = ();
     type Signal = ();
@@ -26,9 +26,7 @@ pub struct InitFt {
     pub description: String,
     pub external_links: ExternalLinks,
     pub initial_supply: u128,
-    pub total_supply: u128,
     pub admin: ActorId,
-    pub initial_capacity: Option<u32>,
     pub config: Config,
 }
 
@@ -136,7 +134,6 @@ pub enum FTQuery {
     Symbol,
     Decimals,
     CurrentSupply,
-    TotalSupply,
     Description,
     ExternalLinks,
     BalanceOf(ActorId),

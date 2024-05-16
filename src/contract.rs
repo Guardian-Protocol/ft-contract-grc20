@@ -35,8 +35,6 @@ pub struct FungibleToken {
     pub external_links: ExternalLinks,
     /// Current supply of the token.
     pub current_supply: u128,
-    /// Total supply of the token.
-    pub total_supply: u128,
     /// Map to hold balances of token holders.
     pub balances: HashMap<ActorId, u128>,
     /// Map to hold allowance information of token holders.
@@ -104,8 +102,8 @@ impl FungibleToken {
         self.balances
             .entry(source)
             .and_modify(|balance| *balance -= amount);
+
         self.current_supply -= amount;
-        self.total_supply -= amount;
 
         Ok(FTEvent::Transferred {
             from: source,
@@ -116,12 +114,15 @@ impl FungibleToken {
 
     pub fn add_admin(&mut self, admin_id: &ActorId) -> Result<FTEvent, FTError> {
         let source = msg::source();
+
         if !self.admins.contains(&source) {
             return Err(FTError::NotAdmin);
         }
+
         if self.admins.contains(admin_id) {
             return Err(FTError::AdminAlreadyExists);
         }
+        
         self.admins.push(*admin_id);
         Ok(FTEvent::AdminAdded {
             admin_id: *admin_id,
@@ -153,6 +154,7 @@ impl FungibleToken {
     ) -> Result<FTEvent, FTError> {
         let msg_source = msg::source();
         let block_timestamp = exec::block_timestamp();
+        
         if let Some(tx_id) = tx_id {
             self.clear_outdated_tx_ids(&msg_source, block_timestamp);
             self.check_tx_id(tx_id, &msg_source)?;

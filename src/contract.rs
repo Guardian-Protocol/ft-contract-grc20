@@ -84,10 +84,9 @@ impl FungibleToken {
             
             self.current_supply += amount;
 
-            return Ok(FTEvent::Transferred {
-                from: ZERO_ID,
+            return Ok(FTEvent::Minted {
                 to,
-                amount,
+                amount
             });
         }
 

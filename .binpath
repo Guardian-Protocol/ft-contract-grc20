@@ -1,1 +1,1 @@
-target/wasm32-unknown-unknown/debug/ft_contract_grc20
+target/wasm32-unknown-unknown/release/ft_contract_grc20

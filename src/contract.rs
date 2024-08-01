@@ -1,10 +1,8 @@
 use gstd::{
     collections::{
-        hash_map::Entry, 
         HashMap, 
         HashSet
     }, 
-    exec, 
     msg, 
     ActorId, 
     String, 
@@ -46,9 +44,27 @@ pub struct FungibleToken {
     /// Configuration parameters for the fungible token contract.
     pub config: Config,
     pub admins: Vec<ActorId>,
+    pub liquidity_contract: ActorId
 }
 
 impl FungibleToken {
+    pub fn add_contract(&mut self, contract: &ActorId) -> Result<FTEvent, FTError> { 
+        let source: ActorId = msg::source();
+
+        if !self.liquidity_contract.is_zero() {
+            Err(FTError::CantDeleteYourself)
+        }
+
+        if !self.admins.contains(&source) {
+            Err(FTError::NotAdmin)
+        }
+        
+        self.liquidity_contract = *contract;
+        Ok(FTEvent::AdminAdded { 
+            admin_id: *contract 
+        })
+    }
+
     pub fn transfer_to_users(&mut self, amount: u128, to_users: Vec<ActorId>) -> Result<FTEvent, FTError> {
         let source = msg::source();
 
@@ -146,18 +162,11 @@ impl FungibleToken {
 
     pub fn transfer(
         &mut self,
-        tx_id: Option<TxId>,
         from: &ActorId,
         to: &ActorId,
         amount: u128,
     ) -> Result<FTEvent, FTError> {
         let msg_source = msg::source();
-        let block_timestamp = exec::block_timestamp();
-        
-        if let Some(tx_id) = tx_id {
-            self.clear_outdated_tx_ids(&msg_source, block_timestamp);
-            self.check_tx_id(tx_id, &msg_source)?;
-        }
 
         if *from == ActorId::zero() || *to == ActorId::zero() {
             return Err(FTError::ZeroAddress);
@@ -165,21 +174,18 @@ impl FungibleToken {
 
         self.check_balance(from, amount)?;
 
-        self.can_transfer(&msg_source, from, amount)?;
+        if &msg_source != self.liquidity_contract {
+            self.can_transfer(&msg_source, from, amount)?;
+        }
 
         self.balances
             .entry(*from)
             .and_modify(|balance| *balance -= amount);
+            
         self.balances
             .entry(*to)
             .and_modify(|balance| *balance += amount)
             .or_insert(amount);
-
-        self.set_tx_id_status(
-            tx_id,
-            &msg_source,
-            block_timestamp + self.config.tx_storage_period,
-        );
 
         Ok(FTEvent::Transferred {
             from: *from,
@@ -191,7 +197,6 @@ impl FungibleToken {
     /// Executed on receiving `fungible-token-messages::ApproveInput`.
     pub fn approve(
         &mut self,
-        tx_id: Option<TxId>,
         to: &ActorId,
         amount: u128,
     ) -> Result<FTEvent, FTError> {
@@ -199,20 +204,12 @@ impl FungibleToken {
             return Err(FTError::ZeroAddress);
         }
         let msg_source = msg::source();
-        let block_timestamp = exec::block_timestamp();
-        if let Some(tx_id) = tx_id {
-            self.clear_outdated_tx_ids(&msg_source, block_timestamp);
-            self.check_tx_id(tx_id, &msg_source)?;
-        }
+
         self.allowances
             .entry(msg_source)
             .or_default()
             .insert(*to, amount);
-        self.set_tx_id_status(
-            tx_id,
-            &msg_source,
-            block_timestamp + self.config.tx_storage_period,
-        );
+
         Ok(FTEvent::Approved {
             from: msg_source,
             to: *to,
@@ -251,40 +248,5 @@ impl FungibleToken {
             }
         }
         Ok(())
-    }
-
-    fn set_tx_id_status(
-        &mut self, 
-        tx_id: Option<TxId>, 
-        account: &ActorId, 
-        valid_until: ValidUntil
-    ) {
-        if let Some(tx_id) = tx_id {
-            self.tx_ids.insert((*account, tx_id), valid_until);
-        }
-    }
-
-    fn check_tx_id(&self, tx_id: TxId, account: &ActorId) -> Result<(), FTError> {
-        if self.tx_ids.get(&(*account, tx_id)).is_some() {
-            return Err(FTError::TxAlreadyExists);
-        }
-
-        Ok(())
-    }
-
-    fn clear_outdated_tx_ids(&mut self, account: &ActorId, block_timestamp: u64) {
-        if let Entry::Occupied(mut tx_ids) = self.account_to_tx_ids.entry(*account) {
-            let tx_ids_cloned = tx_ids.get().clone();
-            for tx_id in tx_ids_cloned {
-                let valid_until = self.tx_ids.get(&(*account, tx_id)).expect("Cant be None");
-                if block_timestamp > *valid_until {
-                    self.tx_ids.remove(&(*account, tx_id));
-                    tx_ids.get_mut().remove(&tx_id);
-                }
-            }
-            if tx_ids.get().is_empty() {
-                tx_ids.remove_entry();
-            }
-        }
     }
 }

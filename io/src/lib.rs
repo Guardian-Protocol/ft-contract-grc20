@@ -61,19 +61,20 @@ pub enum FTAction {
         amount: u128,
     },
     Transfer {
-        tx_id: Option<TxId>,
         from: ActorId,
         to: ActorId,
         amount: u128,
     },
     Approve {
-        tx_id: Option<TxId>,
         to: ActorId,
         amount: u128,
     },
     BalanceOf(ActorId),
     AddAdmin {
         admin_id: ActorId,
+    },
+    AddContract {
+        liquidity_id: ActorId
     },
     DeleteAdmin {
         admin_id: ActorId,
@@ -146,13 +147,6 @@ pub enum FTQuery {
         approved_account: ActorId,
     },
     Admins,
-    GetTxValidityTime {
-        account: ActorId,
-        tx_id: TxId,
-    },
-    GetTxIdsForAccount {
-        account: ActorId,
-    },
 }
 
 #[derive(TypeInfo, Encode, Decode)]
@@ -169,7 +163,5 @@ pub enum FTQueryReply {
     Balance(u128),
     AllowanceOfAccount(u128),
     Admins(Vec<ActorId>),
-    TxValidityTime(ValidUntil),
-    TxIdsForAccount { tx_ids: Vec<TxId> },
 }
 

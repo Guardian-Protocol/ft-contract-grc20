@@ -1,7 +1,7 @@
 #![no_std]
 use contract::FungibleToken;
-use gstd::{collections::HashMap, msg, vec, ActorId, Vec};
-use io::{FTError, FTEvent, FTQuery, FTQueryReply, InitFt, TxId};
+use gstd::{collections::HashMap, msg, vec, ActorId};
+use io::{FTError, FTEvent, FTQuery, FTQueryReply, InitFt};
 
 pub mod contract;
 pub mod handler;
@@ -35,6 +35,7 @@ extern "C" fn init() {
         balances,
         admins: vec![init_config.admin],
         config: init_config.config,
+        liquidity_contract: ActorId::zero(),
         ..Default::default()
     };
     unsafe { FUNGIBLE_TOKEN = Some(ft) };
@@ -82,19 +83,6 @@ extern "C" fn state() {
             FTQueryReply::AllowanceOfAccount(allowance)
         }
         FTQuery::Admins => FTQueryReply::Admins(token.admins),
-        FTQuery::GetTxValidityTime { account, tx_id } => {
-            let valid_until = token.tx_ids.get(&(account, tx_id)).unwrap_or(&0);
-            FTQueryReply::TxValidityTime(*valid_until)
-        }
-        FTQuery::GetTxIdsForAccount { account } => {
-            let tx_ids: Vec<TxId> =
-                if let Some(tx_ids) = token.account_to_tx_ids.get(&account).cloned() {
-                    tx_ids.into_iter().collect()
-                } else {
-                    Vec::new()
-                };
-            FTQueryReply::TxIdsForAccount { tx_ids }
-        }
     };
     msg::reply(reply, 0).expect("Error on sharinf state");
 }

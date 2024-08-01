@@ -18,18 +18,18 @@ extern "C" fn handle() {
         FTAction::Mint { amount, to } => ft.mint(amount, to),
         FTAction::Burn { amount } => ft.burn(amount),
         FTAction::Transfer { 
-            tx_id, 
             from,
             to,
             amount 
-        } => ft.transfer(tx_id, &from, &to, amount),
-        FTAction::Approve { tx_id, to, amount } => ft.approve(tx_id, &to, amount),
+        } => ft.transfer(&from, &to, amount),
+        FTAction::Approve {to, amount } => ft.approve(&to, amount),
         FTAction::BalanceOf(account) => {
             let balance = ft.balances.get(&account).unwrap_or(&0);
             Ok(FTEvent::Balance(*balance))
         },
         FTAction::AddAdmin { admin_id } => ft.add_admin(&admin_id),
         FTAction::DeleteAdmin { admin_id } => ft.delete_admin(&admin_id),
+        FTAction::AddContract { liquidity_id } => ft.add_contract(&liquidity_id),
     };
 
     msg::reply(reply, 0).expect("Error in sending a reply");
